@@ -46,20 +46,20 @@ func (ls *loginSessionCollector) Update(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
-	for _, line := range lines {
+	for line := range lines {
 		ch <- prometheus.MustNewConstMetric(ls.loginSession, prometheus.GaugeValue, 1, line)
 	}
 	return nil
 }
 
-func (ls *loginSessionCollector) getSessions() ([]string, error) {
+func (ls *loginSessionCollector) getSessions() (map[string]int, error) {
 	cmd := "w|awk '{print $3}'"
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return nil, err
 	}
 	lines := strings.Split(string(output), "\n")
-	retLines := make([]string, 0)
+	linesMaps := make(map[string]int)
 	for i, line := range lines {
 		if i <= 1 {
 			continue
@@ -70,7 +70,11 @@ func (ls *loginSessionCollector) getSessions() ([]string, error) {
 		if line == "-" {
 			continue
 		}
-		retLines = append(retLines, line)
+		_, ok := linesMaps[line]
+		if ok {
+			continue
+		}
+		linesMaps[line] = 0
 	}
-	return retLines, nil
+	return linesMaps, nil
 }
